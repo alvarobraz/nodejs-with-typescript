@@ -12,7 +12,7 @@ class UsersRepository implements IUsersRepository {
   constructor() {
     this.repository = getRepository(User);
   }
-
+  
   // método a ser implementado => create
   // dentro dele dados desestruturados de => ICreateUserDTO
   async create({
@@ -32,6 +32,20 @@ class UsersRepository implements IUsersRepository {
     });
     // salvando user via método save
     await this.repository.save(user);
+  }
+
+  async findByEmail(email: string): Promise<User> {
+    const emailExists = this.repository.findOne({
+      email
+    });
+
+    return emailExists;
+  }
+
+  async findById(id: string): Promise<User> {
+    const user = this.repository.findOne(id);
+
+    return user;
   }
   
 }
