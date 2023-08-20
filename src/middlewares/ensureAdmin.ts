@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 
-import { UsersRepository } from '../modules/accounts/repositories/implementations/UsersRepository'
-import { AppError } from '../errors/AppError'
+import { UsersRepository } from '@modules/accounts/repositories/implementations/UsersRepository'
+import { AppError } from '@errors/AppError'
 
 export async function ensureAdmin(req: Request, res: Response, next: NextFunction) {
   const { id } = req.user
