@@ -3,6 +3,7 @@ import { verify } from 'jsonwebtoken';
 import auth from '@config/auth';
 import { UsersRepository } from '@modules/accounts/repositories/implementations/UsersRepository';
 import { AppError } from '@errors/AppError';
+import { UsersTokensRepository } from '@modules/accounts/repositories/implementations/UsersTokensRepository';
 
 
 interface IPayload {
@@ -17,6 +18,7 @@ export async function ensureAuthenticated(
 
   // recebendo token via request.headers.authorization
   const authHeader = request.headers.authorization;
+  const userTokensRepository = new UsersTokensRepository();
 
   if (!authHeader) {
     throw new AppError('Token missing', 401);
@@ -26,13 +28,13 @@ export async function ensureAuthenticated(
   const [, token] = authHeader.split(' ');
 
   try {
-    const { sub: user_id } = verify(token, auth.secret_token) as IPayload;
+    const { sub: user_id } = verify(token, auth.secret_refresh_token) as IPayload;
 
     // chamando repositorio para poder usar o método findById
     const userRepository = new UsersRepository();
 
     // usando o método findById
-    const user = await userRepository.findById(user_id)
+    const user = await userTokensRepository.findByUserIdAndRefreshToken(user_id, token)
 
     if(!user) {
       throw new AppError('User do not exists!', 401)

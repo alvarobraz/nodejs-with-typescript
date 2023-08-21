@@ -4,6 +4,8 @@ import { compare } from "bcryptjs";
 import auth from "@config/auth";
 import { sign } from "jsonwebtoken";
 import { AppError } from "@errors/AppError";
+import { IUsersTokensRepository } from "@modules/accounts/repositories/IUsersTokensRepository";
+import { IDateProvider } from "@shared/container/providers/Dateprovider/IDateProvider";
 
 // tipagem da requisição
 interface IRequest {
@@ -17,7 +19,8 @@ interface IResponse {
     name: string;
     email: string;
   },
-  token: string
+  token: string;
+  refresh_token: string;
 }
 
 @injectable()
@@ -25,7 +28,11 @@ class AuthenticateUserUseCase {
 
   constructor(
     @inject('UsersRepository')
-    private usersRepository: IUsersRepository
+    private usersRepository: IUsersRepository,
+    @inject('UsersTokensRepository')
+    private usersTokensRepository: IUsersTokensRepository,
+    @inject('DayjsDateProvider')
+    private dateProvider: IDateProvider,
   ) {}
 
   async execute({ email, password }: IRequest): Promise<IResponse> {
@@ -35,7 +42,10 @@ class AuthenticateUserUseCase {
     // variaveis de ambiente para autenticação
     const {
       expires_in_token,
-      secret_token
+      secret_token,
+      secret_refresh_token,
+      expires_in_refresh_token,
+      expires_refresh_token_days
     } = auth;
 
     if (!user) {
@@ -55,13 +65,32 @@ class AuthenticateUserUseCase {
       expiresIn: expires_in_token,
     });
 
+    // passando email como payload para recuperação do token
+    const refresh_token = sign({ email }, secret_refresh_token, {
+      subject: user.id,
+      expiresIn: expires_in_refresh_token,
+    });
+
+    // definindo via dayjs uma expriração para esse refresh token
+    const refresh_token_expires_date = this.dateProvider.addDays(
+      expires_refresh_token_days,
+    );
+
+    await this.usersTokensRepository.create({
+      user_id: user.id,
+      refresh_token,
+      expiration_date: refresh_token_expires_date,
+    });
+
     // contruindo retorno com tipagem
     const tokenReturn: IResponse = {
       token,
       user: {
         name: user.name,
-        email: user.email
-      }
+        email: user.email,
+        
+      },
+      refresh_token
     }
 
     return tokenReturn
